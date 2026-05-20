@@ -1,8 +1,10 @@
 name: Add Github PR to Asana Task
 
 on:
-  pull_request:
-    types: [opened, reopened]
+  workflow_call:
+    secrets:
+      ASANA_SECRET:
+        required: true
 
 jobs:
   create-asana-attachment-job:
