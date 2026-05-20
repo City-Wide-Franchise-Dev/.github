@@ -1,0 +1,47 @@
+name: Add Random Member and Team as Reviewers - Front End
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pick Random Member From Team
+        id: pick_random
+        run: |
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          echo "PR Author: $AUTHOR"
+
+          members_json=$(curl -s -H "Authorization: token ${{ secrets.ADD_REVIEWERS_TOKEN }}" \
+                                -H "Accept: application/vnd.github+json" \
+                                "https://api.github.com/orgs/City-Wide-Franchise-Dev/teams/front-end-experts/members")
+
+          echo "API Response:"
+          echo "$members_json"
+
+          members=$(echo "$members_json" | jq -r '.[].login')
+
+          filtered_members=$(echo "$members" | grep -v "^$AUTHOR$")
+
+          if [ -z "$filtered_members" ]; then
+            echo "No members found after excluding PR author"
+            exit 1
+          fi
+
+          random_member=$(echo "$filtered_members" | shuf -n 1)
+          echo "RANDOM_MEMBER=$random_member" >> $GITHUB_ENV
+          echo "Picked random member: $random_member"
+
+      - name: Add Reviewers
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.ADD_REVIEWERS_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/requested_reviewers" \
+            -d "{\"reviewers\": [\"${RANDOM_MEMBER}\"], \"team_reviewers\": [\"front-end-experts\"]}"
