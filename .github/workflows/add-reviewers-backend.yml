@@ -1,8 +1,10 @@
 name: Add Random Member and Team as Reviewers - Back End
 
 on:
-  pull_request:
-    types: [opened]
+  workflow_call:
+    secrets:
+      ADD_REVIEWERS_TOKEN:
+        required: true
 
 permissions:
   pull-requests: write
